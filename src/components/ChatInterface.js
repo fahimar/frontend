@@ -17,16 +17,41 @@ export default function ChatInterface() {
 
   const sendMessage = async (messageText) => {
     try {
-      // Add the user message to the state
+      // Create the user message
       const userMessage = { role: "user", content: messageText };
-      setMessages((prev) => [...prev, userMessage]);
 
-      // Show loading state
-      setIsLoading(true);
+      // Update messages state and capture the new full messages array
+      setMessages((prevMessages) => {
+        const updatedMessages = [...prevMessages, userMessage];
 
-      // Send the message to the API
+        // Show loading state
+        setIsLoading(true);
+
+        // Use the updated messages array for the API call
+        sendToAPI(updatedMessages);
+
+        // Return the updated messages for state update
+        return updatedMessages;
+      });
+    } catch (error) {
+      console.error("Error in message handling:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Sorry, I encountered an error. Please try again.",
+        },
+      ]);
+      setIsLoading(false);
+    }
+  };
+
+  // Separate function to handle the API call
+  const sendToAPI = async (currentMessages) => {
+    try {
+      // Send the message to the API with the current messages array
       const response = await axios.post("/api/chat", {
-        messages: [...messages, userMessage],
+        messages: currentMessages,
       });
 
       // Add the AI response to the state
@@ -35,12 +60,13 @@ export default function ChatInterface() {
         { role: "assistant", content: response.data.response },
       ]);
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error("Error sending message to API:", error);
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "Sorry, I encountered an error. Please try again.",
+          content:
+            "Sorry, I encountered an error communicating with the AI service. Please try again.",
         },
       ]);
     } finally {
@@ -68,7 +94,6 @@ export default function ChatInterface() {
         )}
         <div ref={messagesEndRef} />
       </div>
-
       <MessageInput onSendMessage={sendMessage} isLoading={isLoading} />
     </div>
   );
